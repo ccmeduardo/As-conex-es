@@ -1,4 +1,4 @@
-/*! p5.js v1.11.5 April 17, 2025 */
+/*! p5.js v1.11.7 May 14, 2025 */
 (function (f) {
   if (typeof exports === 'object' && typeof module !== 'undefined') {
     module.exports = f()
@@ -59315,7 +59315,7 @@
  * @property {String} VERSION
  * @final
  */
-        var VERSION = '1.11.5';
+        var VERSION = '1.11.7';
         // GRAPHICS RENDERER
         /**
  * The default, two-dimensional renderer.
@@ -65826,6 +65826,7 @@
             //////////////////////////////////////////////
             // PUBLIC p5 PROPERTIES AND METHODS
             //////////////////////////////////////////////
+            this._isGlobal = !sketch;
             /**
      * A function that's called once to load assets before the sketch runs.
      *
@@ -66071,7 +66072,6 @@
             this._glAttributes = null;
             this._requestAnimId = 0;
             this._preloadCount = 0;
-            this._isGlobal = false;
             this._loop = true;
             this._startListener = null;
             this._initializeInstanceVariables();
@@ -66484,19 +66484,10 @@
             };
             // ensure correct reporting of window dimensions
             this._updateWindowSize();
-            // call any registered init functions
-            this._registeredMethods.init.forEach(function (f) {
-              if (typeof f !== 'undefined') {
-                f.call(this);
-              }
-            }, this);
-            // Set up promise preloads
-            this._setupPromisePreloads();
             var friendlyBindGlobal = this._createFriendlyGlobalFunctionBinder();
             // If the user has created a global setup or draw function,
             // assume "global" mode and make everything global (i.e. on the window)
-            if (!sketch) {
-              this._isGlobal = true;
+            if (this._isGlobal) {
               p5.instance = this;
               // Loop through methods on the prototype and attach them to the window
               for (var p in p5.prototype) {
@@ -66528,8 +66519,13 @@
               // Run a check to see if the user has misspelled 'setup', 'draw', etc
               // detects capitalization mistakes only ( Setup, SETUP, MouseClicked, etc)
               p5._checkForUserDefinedFunctions(this);
-            }            // Bind events to window (not using container div bc key events don't work)
-
+            }
+            this._updateWindowSize();
+            // call any registered init functions
+            this.callRegisteredHooksFor('init');
+            // Set up promise preloads
+            this._setupPromisePreloads();
+            // Bind events to window (not using container div bc key events don't work)
             for (var e in this._events) {
               var f = this['_on'.concat(e)];
               if (f) {
@@ -89636,10 +89632,12 @@
  * </div>
  */
         _main.default.prototype._onkeydown = function (e) {
+          // Ignore repeated key events when holding down a key
           if (e.repeat) {
-            // Ignore repeated key events when holding down a key
+            this._setProperty('isKeyRepeated', true);
             return;
           }
+          this._setProperty('isKeyRepeated', false);
           this._setProperty('isKeyPressed', true);
           this._setProperty('keyIsPressed', true);
           this._setProperty('keyCode', e.which);
@@ -89973,7 +89971,7 @@
  * </div>
  */
         _main.default.prototype._onkeypress = function (e) {
-          if (e.which === this._lastKeyCodeTyped) {
+          if (e.which === this._lastKeyCodeTyped && this.isKeyRepeated) {
             // prevent multiple firings
             return;
           }
@@ -91034,15 +91032,16 @@
         _main.default.prototype._updateNextMouseCoords = function (e) {
           if (this._curElement !== null && (!e.touches || e.touches.length > 0)) {
             var mousePos = getMousePos(this._curElement.elt, this.width, this.height, e);
-            this._setProperty('movedX', e.movementX);
-            this._setProperty('movedY', e.movementY);
             this._setProperty('mouseX', mousePos.x);
             this._setProperty('mouseY', mousePos.y);
             this._setProperty('winMouseX', mousePos.winX);
             this._setProperty('winMouseY', mousePos.winY);
+            var deltaX = this.mouseX - this.pmouseX;
+            var deltaY = this.mouseY - this.pmouseY;
+            this._setProperty('movedX', deltaX);
+            this._setProperty('movedY', deltaY);
           }
           if (!this._hasMouseInteracted) {
-            // For first draw, make previous and next equal
             this._updateMouseCoords();
             this._setProperty('_hasMouseInteracted', true);
           }
@@ -123530,7 +123529,7 @@
  * three parameters, `v1`, `v2`, and `v3`, set the light’s color using the
  * current <a href="#/p5/colorMode">colorMode()</a>. The last parameter,
  * `direction` sets the light’s direction using a
- * <a href="#/p5.Geometry">p5.Geometry</a> object. For example,
+ *  <a href="#/p5.Vector">p5.Vector</a> object. For example,
  * `directionalLight(255, 0, 0, lightDir)` creates a red `(255, 0, 0)` light
  * that shines in the direction the `lightDir` vector points.
  *
