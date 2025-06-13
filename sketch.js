@@ -141,4 +141,3 @@ class Obstaculo {
     text(this.emoji, this.x, this.y);
   }
 }
-
