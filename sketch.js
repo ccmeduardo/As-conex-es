@@ -3,70 +3,76 @@ let itens = [];
 let obstaculos = [];
 let pontos = 0;
 let tempo = 0;
+let jogoIniciado = false;
 
 function setup() {
   createCanvas(600, 600);
   personagem = new Personagem();
-  
-  // Inicia o tempo de geração de itens e obstáculos
   frameRate(60);
+
+  // Aguarda 6 segundos (360 frames) para iniciar o jogo
+  setTimeout(() => {
+    jogoIniciado = true;
+  }, 6000);
 }
 
 function draw() {
-  background(200, 255, 200);  // Fundo que lembra o campo
+  background(200, 255, 200);
 
-  // Desenha o personagem
+  if (!jogoIniciado) {
+    // Mensagem antes do jogo começar
+    fill(0);
+    textAlign(CENTER, CENTER);
+    textSize(24);
+    text("Para começar use as setas para se movimentar\npara pegar todos os itens", width / 2, height / 2);
+    return;
+  }
+
   personagem.display();
   personagem.move();
 
-  // Gera novos itens e obstáculos periodicamente
   tempo++;
   if (tempo % 60 == 0) {
     gerarItem();
   }
 
-  // Desenha e atualiza os itens coletáveis
   for (let i = itens.length - 1; i >= 0; i--) {
     itens[i].update();
     itens[i].display();
 
     if (personagem.colidiu(itens[i])) {
       itens.splice(i, 1);
-      pontos += 10; // Ganha pontos por coletar um item
+      pontos += 10;
     }
   }
 
-  // Desenha e atualiza os obstáculos
   for (let i = obstaculos.length - 1; i >= 0; i--) {
     obstaculos[i].update();
     obstaculos[i].display();
 
     if (personagem.colidiu(obstaculos[i])) {
       obstaculos.splice(i, 1);
-      pontos -= 5; // Perde pontos ao bater em um obstáculo
+      pontos -= 5;
     }
   }
 
-  // Exibe a pontuação
   fill(0);
   textSize(24);
+  textAlign(CENTER);
   text("Pontos: " + pontos, width / 2, 30);
 }
 
-// Gera um item aleatório (campo ou cidade)
 function gerarItem() {
   let tipo = random() > 0.5 ? 'campo' : 'cidade';
   let item = new Item(tipo);
   itens.push(item);
-  
-  // Gera um obstáculo aleatório
+
   if (random() > 0.8) {
     let obstaculo = new Obstaculo();
     obstaculos.push(obstaculo);
   }
 }
 
-// Classe do personagem
 class Personagem {
   constructor() {
     this.x = width / 2;
@@ -87,7 +93,7 @@ class Personagem {
   display() {
     textSize(32);
     fill(0);
-    text("🚶", this.x, this.y);  // Personagem é um emoji (pode mudar para outro emoji)
+    text("🚶", this.x, this.y);
   }
 
   colidiu(obj) {
@@ -95,7 +101,6 @@ class Personagem {
   }
 }
 
-// Classe de itens coletáveis
 class Item {
   constructor(tipo) {
     this.tipo = tipo;
@@ -103,7 +108,7 @@ class Item {
     this.y = -20;
     this.size = 30;
     this.speed = 3;
-    this.emoji = this.tipo === 'campo' ? '🌾' : '🏙️'; // Emoji de campo ou cidade
+    this.emoji = this.tipo === 'campo' ? '🌾' : '🏙️';
   }
 
   update() {
@@ -117,14 +122,13 @@ class Item {
   }
 }
 
-// Classe de obstáculos
 class Obstaculo {
   constructor() {
     this.x = random(width);
     this.y = -20;
     this.size = 40;
     this.speed = 4;
-    this.emoji = '🚗';  // Obstáculo é um carro
+    this.emoji = '🚗';
   }
 
   update() {
@@ -137,3 +141,4 @@ class Obstaculo {
     text(this.emoji, this.x, this.y);
   }
 }
+
