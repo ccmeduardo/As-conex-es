@@ -1,146 +1,139 @@
-let player;
-let items = [];
-let score = 0;
-let itemTypes = ['campo', 'cidade'];
-let gameWidth = 600;
-let gameHeight = 400;
+let personagem;
+let itens = [];
+let obstaculos = [];
+let pontos = 0;
+let tempo = 0;
 
 function setup() {
-  createCanvas(gameWidth, gameHeight);
-  player = new Player();
+  createCanvas(600, 600);
+  personagem = new Personagem();
+  
+  // Inicia o tempo de geração de itens e obstáculos
   frameRate(60);
 }
 
 function draw() {
-  background(180, 230, 180); 
-  stroke(150);
-  strokeWeight(4);
-  line(width / 2, 0, width / 2, height);
+  background(200, 255, 200);  // Fundo que lembra o campo
 
-  fill(200, 200, 255);
-  noStroke();
-  rect(width / 2, 0, width / 2, height); 
-  player.move();
-  player.show();
+  // Desenha o personagem
+  personagem.display();
+  personagem.move();
 
-  if (frameCount % 60 === 0) {
-    items.push(new Item(random(itemTypes)));
+  // Gera novos itens e obstáculos periodicamente
+  tempo++;
+  if (tempo % 60 == 0) {
+    gerarItem();
   }
 
-  for (let i = items.length - 1; i >= 0; i--) {
-    items[i].fall();
-    items[i].show();
+  // Desenha e atualiza os itens coletáveis
+  for (let i = itens.length - 1; i >= 0; i--) {
+    itens[i].update();
+    itens[i].display();
 
-    if (items[i].hits(player)) {
-      score++;
-      items.splice(i, 1);
-    } else if (items[i].offscreen()) {
-      items.splice(i, 1);
+    if (personagem.colidiu(itens[i])) {
+      itens.splice(i, 1);
+      pontos += 10; // Ganha pontos por coletar um item
     }
   }
 
-  fill(0);
-  textSize(20);
-  text("Pontuação: " + score, 10, 30);
+  // Desenha e atualiza os obstáculos
+  for (let i = obstaculos.length - 1; i >= 0; i--) {
+    obstaculos[i].update();
+    obstaculos[i].display();
 
-  noStroke(); 
-  fill(80);
-  textSize(14);
-  textAlign(CENTER);
-  text("Campo", width / 4, 20);
-  text("Cidade", width * 3/4, 20);
+    if (personagem.colidiu(obstaculos[i])) {
+      obstaculos.splice(i, 1);
+      pontos -= 5; // Perde pontos ao bater em um obstáculo
+    }
+  }
+
+  // Exibe a pontuação
+  fill(0);
+  textSize(24);
+  text("Pontos: " + pontos, width / 2, 30);
 }
-class Player {
+
+// Gera um item aleatório (campo ou cidade)
+function gerarItem() {
+  let tipo = random() > 0.5 ? 'campo' : 'cidade';
+  let item = new Item(tipo);
+  itens.push(item);
+  
+  // Gera um obstáculo aleatório
+  if (random() > 0.8) {
+    let obstaculo = new Obstaculo();
+    obstaculos.push(obstaculo);
+  }
+}
+
+// Classe do personagem
+class Personagem {
   constructor() {
     this.x = width / 2;
-    this.y = height - 30;
-    this.size = 40;
+    this.y = height - 50;
+    this.size = 30;
     this.speed = 5;
   }
 
   move() {
-    if (keyIsDown(LEFT_ARROW)) {
+    if (keyIsDown(LEFT_ARROW) && this.x > 0) {
       this.x -= this.speed;
     }
-    if (keyIsDown(RIGHT_ARROW)) {
+    if (keyIsDown(RIGHT_ARROW) && this.x < width - this.size) {
       this.x += this.speed;
     }
-
-    this.x = constrain(this.x, this.size / 2, width - this.size / 2);
   }
 
-  show() {
-    fill(255, 220, 180);
-    ellipse(this.x, this.y, this.size, this.size);
-    
-    fill(60, 120, 40);
-    triangle(
-      this.x - this.size / 2, this.y - 20,
-      this.x, this.y - 40,
-      this.x, this.y - 20
-    );
-    fill(100, 100, 180);
-    rect(this.x, this.y - 40, this.size / 4, 20);
-    fill(200);
-    rect(this.x + 5, this.y - 35, 6, 6);
-   rect(this.x + 15, this.y - 35, 6, 6);
+  display() {
+    textSize(32);
+    fill(0);
+    text("🚶", this.x, this.y);  // Personagem é um emoji (pode mudar para outro emoji)
+  }
+
+  colidiu(obj) {
+    return dist(this.x, this.y, obj.x, obj.y) < this.size + obj.size;
   }
 }
 
+// Classe de itens coletáveis
 class Item {
-  constructor(type) {
-    this.type = type;
-    this.x = this.type === 'campo' ? random(20, width / 2 - 20) : random(width / 2 + 20, width - 20);
-    this.y = 0;
+  constructor(tipo) {
+    this.tipo = tipo;
+    this.x = random(width);
+    this.y = -20;
     this.size = 30;
-    this.speed = 2 + random(1);
+    this.speed = 3;
+    this.emoji = this.tipo === 'campo' ? '🌾' : '🏙️'; // Emoji de campo ou cidade
   }
 
-  fall() {
+  update() {
     this.y += this.speed;
   }
 
-  offscreen() {
-    return this.y > height + this.size;
+  display() {
+    textSize(32);
+    fill(0);
+    text(this.emoji, this.x, this.y);
+  }
+}
+
+// Classe de obstáculos
+class Obstaculo {
+  constructor() {
+    this.x = random(width);
+    this.y = -20;
+    this.size = 40;
+    this.speed = 4;
+    this.emoji = '🚗';  // Obstáculo é um carro
   }
 
-  hits(player) {
-    let d = dist(this.x, this.y, player.x, player.y);
-    return d < (this.size + player.size) / 2;
+  update() {
+    this.y += this.speed;
   }
 
-  show() {
-    if (this.type === 'campo') {
-      this.drawCampo();
-    } else {
-      this.drawCidade();
-    }
-  }
-
-  drawCampo() {
-    push();
-    translate(this.x, this.y);
-    fill(255, 220, 0);
-    ellipse(0, 0, this.size / 2, this.size);
-    fill(100, 180, 40);
-    for (let i = -this.size / 4; i < this.size / 4; i += 10) {
-      triangle(i, 0, i + 5, -10, i + 10, 0);
-    }
-    pop();
-  }
-
-  drawCidade() {
-    push();
-    translate(this.x, this.y);
-    fill(100, 100, 180);
-    rectMode(CENTER);
-    rect(0, 0, this.size / 2, this.size);
-    fill(255);
-    for (let y = -this.size / 4; y < this.size / 4; y += 10) {
-      for (let x = -this.size / 4; x < this.size / 4; x += 10) {
-        rect(x, y, 5, 5);
-      }
-    }
-    pop();
+  display() {
+    textSize(40);
+    fill(255, 0, 0);
+    text(this.emoji, this.x, this.y);
   }
 }
